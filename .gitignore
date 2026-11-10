@@ -1,0 +1,14 @@
+.gradle/
+build/
+out/
+.idea/
+.vscode/
+*.iml
+*.log
+.env
+application-local.yml
+tools/data/
+tools/deck/
+docs/screenshots/
+docs/screenshots_new/
+deliverables/_*
