@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: studyseat
+  datasource:
+    # 기본은 파일 없는 H2(MySQL 모드). MySQL을 쓰려면 환경변수 DB_URL/DB_USER/DB_PASSWORD 지정
+    url: ${DB_URL:jdbc:h2:mem:studyseat;MODE=MySQL;DB_CLOSE_DELAY=-1}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+    hikari:
+      # MySQL 기본(REPEATABLE READ)이면 잠금 뒤에도 오래된 스냅샷을 읽을 수 있어 매 조회가 최신을 보도록 맞춘다
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: Asia/Seoul
+  flyway:
+    enabled: true
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/css,application/javascript
+    min-response-size: 2048
