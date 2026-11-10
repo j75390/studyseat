@@ -1,4 +1,4 @@
-# StudySeat
+<p align="center"><img src="docs/images/title.svg" alt="StudySeat" width="85%"></p>
 
 스터디카페 좌석 예약 서비스입니다. 지점을 지도에서 찾고, 매장 도면에서 자리를 직접 눌러 예약하고, QR 코드로 입실합니다.
 
