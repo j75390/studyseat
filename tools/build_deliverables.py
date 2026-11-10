@@ -337,8 +337,7 @@ def build_xlsx():
         wb.save(OUT / name)
         print("XLSX", name)
 
-    save("07_WBS.xlsx", [("WBS", ["단계", "작업", "시작", "종료", "상태"], WBS, [12, 80, 14, 14, 10])])
-    save("08_요구사항_명세서.xlsx", [("요구사항", REQ_H, REQ, [10, 8, 90, 36]), ("정책 값", POLICY_H, POLICY, [20, 90])])
+    # 07_WBS.xlsx 는 tools/build_wbs.py 가 만든다(번호·담당·간트 형식)`n    save("08_요구사항_명세서.xlsx", [("요구사항", REQ_H, REQ, [10, 8, 90, 36]), ("정책 값", POLICY_H, POLICY, [20, 90])])
     save("09_기능_명세서_목록.xlsx", [("기능 목록", REQ_H, REQ, [10, 8, 90, 36]), ("사용자별 권한", ROLE_H, ROLE, [54, 10, 10, 10]),
                                ("예약 상태", ["상태", "다음 상태", "조건"], [("BOOKED(예약)", "CHECKED_IN(이용 중)", "입실"), ("CHECKED_IN", "DONE(이용 완료)", "퇴실 또는 종료 시각 자동 종료"), ("BOOKED", "CANCELED(취소)", "시작 60분 전까지 취소 / 관리자 강제 취소"),
                                                                      ("BOOKED", "NO_SHOW(노쇼)", "입실 유예(10분) 초과"), ("CHECKED_IN", "CANCELED", "관리자 강제 취소")], [18, 24, 50])])
