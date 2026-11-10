@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('포인트')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('pnt')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <h1>포인트</h1>
+  <p class="sub">1포인트 = 1원. 잔액은 아래 내역의 합계예요. 내역은 쌓이기만 하고 고쳐지지 않아요.</p>
+
+  <div class="wallet">
+    <div style="opacity:.85;font-size:13px">보유 포인트</div>
+    <div class="big" th:text="${#numbers.formatInteger(balance, 1, 'COMMA')} + 'P'">0P</div>
+  </div>
+
+  <div class="card">
+    <h3>충전하기 <span class="tiny">데모 결제 — 실제로 결제되지 않아요</span></h3>
+    <div class="grid c3" style="margin-top:10px">
+      <form th:action="@{/my/points/charge}" method="post"><input type="hidden" name="amount" value="10000"><button class="pack" type="submit"><b>10,000P</b><span>&nbsp;</span></button></form>
+      <form th:action="@{/my/points/charge}" method="post"><input type="hidden" name="amount" value="30000"><button class="pack" type="submit"><b>30,000P</b><span>+5% 보너스</span></button></form>
+      <form th:action="@{/my/points/charge}" method="post"><input type="hidden" name="amount" value="50000"><button class="pack" type="submit"><b>50,000P</b><span>+10% 보너스</span></button></form>
+      <form th:action="@{/my/points/charge}" method="post"><input type="hidden" name="amount" value="100000"><button class="pack" type="submit"><b>100,000P</b><span>+12% 보너스</span></button></form>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>내역</h3>
+    <table>
+      <thead><tr><th>일시</th><th>구분</th><th>예약</th><th style="text-align:right">포인트</th></tr></thead>
+      <tbody>
+        <tr th:each="p : ${history}">
+          <td th:text="${#temporals.format(p.createdAt, 'MM-dd HH:mm')}"></td>
+          <td th:text="${p.reason == 'CHARGE' ? '충전·지급' : (p.reason == 'BONUS' ? '충전 보너스' : (p.reason == 'USE' ? '예약 사용' : (p.reason == 'EXTEND' ? '연장 사용' : (p.reason == 'REFUND' ? '취소 환불' : '이용 적립'))))}"></td>
+          <td th:text="${p.reservationId != null ? '#' + p.reservationId : '-'}"></td>
+          <td style="text-align:right" th:class="${p.amount >= 0 ? 'pos' : 'neg'}" th:text="${(p.amount > 0 ? '+' : '') + #numbers.formatInteger(p.amount, 1, 'COMMA')}"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('pnt')}"></nav>
+</body>
+</html>

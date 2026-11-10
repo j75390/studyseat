@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('이용 후기')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('rev')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <h1>이용 후기</h1>
+  <p class="sub">이용을 마친 회원만 후기를 남길 수 있어요.
+    <span th:if="${!reviews.isEmpty()}">전체 평균 <b class="stars">★</b> <b th:text="${#numbers.formatDecimal(rating, 1, 1)}"></b> (<span th:text="${reviews.size()}"></span>개)</span></p>
+  <div class="card">
+    <p class="muted" th:if="${reviews.isEmpty()}" style="margin:0">아직 후기가 없어요.</p>
+    <div class="review" th:each="v : ${reviews}">
+      <span class="stars" th:text="${'★'.repeat(v.review.rating) + '☆'.repeat(5 - v.review.rating)}"></span>
+      <b th:text="${v.writer}"></b> <span class="pill" th:text="${v.branchName}"></span>
+      <span class="tiny" th:text="${#temporals.format(v.review.createdAt, 'yyyy.MM.dd')}"></span>
+      <div th:text="${v.review.content}"></div>
+    </div>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('rev')}"></nav>
+</body>
+</html>

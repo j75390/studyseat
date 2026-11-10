@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('홈')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('home')}"></header>
+<main class="narrow home-page">
+  <div th:replace="~{fragments :: flash}"></div>
+
+  <!-- 로고 + 한 줄 소개 + 검색 -->
+  <section class="hero-home">
+    <div class="brandmark"><img class="mark" th:src="@{/img/logo.svg}" alt=""><span>StudySeat</span></div>
+    <h1>내 자리, 미리 잡아두세요</h1>
+    <p>가까운 스터디카페를 지도에서 찾고, 도면에서 자리를 골라 바로 예약해요.</p>
+    <form th:action="@{/branches}" method="get" class="hero-search">
+      <input name="q" type="search" placeholder="지점 이름·지역 검색 (예: 대전 둔산)" autocomplete="off">
+      <button class="btn" type="submit">검색</button>
+    </form>
+    <div class="hero-stats">
+      <div><b th:text="${#numbers.formatInteger(branchCount, 1, 'COMMA')}">0</b><span>전국 지점</span></div>
+      <div><b th:text="${#numbers.formatInteger(totalSeats, 1, 'COMMA')}">0</b><span>전체 좌석</span></div>
+      <div><b th:text="${#numbers.formatInteger(freeSeats, 1, 'COMMA')}">0</b><span>지금 비어 있는 좌석</span></div>
+    </div>
+  </section>
+
+  <!-- 바로가기 -->
+  <section class="tiles">
+    <a class="tile" th:href="@{/branches}"><b><i data-lucide="map-pin"></i></b><span>지점 찾기</span><small>지도에서 가까운 곳</small></a>
+    <a class="tile" th:href="${me != null} ? @{/my/reservations} : @{/login}"><b><i data-lucide="ticket"></i></b><span>내 예약</span><small>QR 입실 · 연장</small></a>
+    <a class="tile" th:href="${me != null} ? @{/my/points} : @{/login}"><b><i data-lucide="wallet"></i></b><span>포인트</span><small>충전 · 내역</small></a>
+    <a class="tile" th:href="@{/reviews}"><b><i data-lucide="message-square-text"></i></b><span>이용 후기</span><small>다녀간 분들 이야기</small></a>
+  </section>
+
+  <!-- 내 지점 -->
+  <section th:if="${!favorites.isEmpty()}">
+    <h2>내 지점</h2>
+    <div class="hlist">
+      <a class="hcard" th:each="c : ${favorites}" th:href="@{/branches/{id}(id=${c.branch.id})}">
+        <div class="top"><b th:text="${c.branch.name}">지점</b>
+          <span class="pill" th:classappend="${c.level}" th:text="${c.level == 'OK' ? '여유' : (c.level == 'BUSY' ? '보통' : (c.level == 'FULL' ? '혼잡' : '영업 종료'))}"></span></div>
+        <div class="muted" th:text="${c.openNow} ? ('잔여 ' + ${c.freeNow} + ' / ' + ${c.totalSeats} + '석') : '지금은 영업 종료'"></div>
+      </a>
+    </div>
+  </section>
+  <section th:if="${me != null and favorites.isEmpty()}" class="card flat" style="text-align:center">
+    <div class="muted">자주 가는 지점을 ♥로 등록하면 여기에 바로 보여요.</div>
+  </section>
+
+  <!-- 지금 한가한 곳 -->
+  <section>
+    <h2>지금 여유 있는 지점</h2>
+    <div class="hlist">
+      <a class="hcard" th:each="c : ${relaxed}" th:href="@{/branches/{id}(id=${c.branch.id})}">
+        <div class="top"><b th:text="${c.branch.name}">지점</b><span class="pill OK">여유</span></div>
+        <div class="muted" th:text="${c.branch.address}">주소</div>
+        <div class="meta"><span>잔여 <b th:text="${c.freeNow}">0</b> / <span th:text="${c.totalSeats}">0</span>석</span>
+          <span><b th:text="${#numbers.formatInteger(c.minPrice, 1, 'COMMA')}">0</b>P/시간~</span></div>
+        <div class="bar OK"><i th:style="'width:' + ${c.busyPercent} + '%'"></i></div>
+      </a>
+    </div>
+    <p style="margin:10px 0 0"><a class="btn ghost block" th:href="@{/branches}">지도에서 전체 지점 보기</a></p>
+  </section>
+
+  <!-- 지역 바로가기 -->
+  <section>
+    <h2>지역으로 찾기</h2>
+    <div class="chips">
+      <a class="chip" th:each="r : ${regions}" th:href="@{/branches(sido=${r.key})}" th:text="${r.key} + ' ' + ${r.value}"></a>
+    </div>
+  </section>
+
+  <!-- 이용 방법 -->
+  <section>
+    <h2>이용 방법</h2>
+    <div class="steps3">
+      <div><i>1</i><b>지점 선택</b><span>지도에서 가까운 지점과 지금 잔여석을 확인해요.</span></div>
+      <div><i>2</i><b>도면에서 좌석 선택</b><span>날짜·시간을 고르고 매장 도면에서 자리를 눌러요.</span></div>
+      <div><i>3</i><b>QR로 입실</b><span>입구 키오스크에 QR을 대면 입실, 앱에서 연장도 돼요.</span></div>
+    </div>
+  </section>
+
+  <!-- 후기 -->
+  <section th:if="${!reviews.isEmpty()}">
+    <h2>이용 후기</h2>
+    <div class="card">
+      <div class="review" th:each="v : ${reviews}">
+        <span class="stars" th:text="${'★'.repeat(v.review.rating) + '☆'.repeat(5 - v.review.rating)}"></span>
+        <b th:text="${v.writer}"></b> <span class="pill" th:text="${v.branchName}"></span>
+        <div th:text="${v.review.content}"></div>
+      </div>
+      <a class="muted" th:href="@{/reviews}">후기 더 보기 →</a>
+    </div>
+  </section>
+
+  <footer class="site-foot">
+    <div class="brandmark sm"><img class="mark" th:src="@{/img/logo.svg}" alt=""><span>StudySeat</span></div>
+    <p>개인 토이 프로젝트 · 지점 이름·주소·전화는 가상의 예시이고, 지점이 놓인 시·군·구·읍·면·동은 실제 행정구역(2026년 10월 기준)입니다. 결제는 데모입니다.</p>
+    <p>지도 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>
+  </footer>
+</main>
+<nav th:replace="~{fragments :: tabbar('home')}"></nav>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('좌석 관리')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('admin')}"></header>
+<main class="wide">
+  <div th:replace="~{fragments :: flash}"></div>
+  <h1>좌석 관리</h1>
+  <p class="sub">지점 이름이나 지역(예: 대전, 둔산)으로 찾아 한 지점씩 엽니다. 좌석을 끄면 새 예약을 받지 않고 도면에 "이용 불가"로 보여요. 이미 잡힌 예약은 유지돼요.</p>
+  <div class="card">
+    <form method="get" th:action="@{/admin/seats}" class="row">
+      <div style="min-width:260px"><label for="q" style="margin-top:0">지점 검색</label><input id="q" name="q" th:value="${q}" placeholder="예: 대전 둔산" autocomplete="off"></div>
+      <div><button class="btn" type="submit">검색</button></div>
+    </form>
+    <p class="muted" th:if="${!q.isEmpty() and matches.isEmpty()}" style="margin:10px 0 0">검색 결과가 없어요.</p>
+    <div class="chips" th:if="${!matches.isEmpty()}" style="margin-top:12px">
+      <a class="chip" th:each="m : ${matches}" th:classappend="${m.branch.id == branch.id} ? 'on'"
+         th:href="@{/admin/seats(q=${q}, branchId=${m.branch.id})}" th:text="${m.branch.name}"></a>
+    </div>
+  </div>
+
+  <h2 th:text="${branch.name}">지점</h2>
+  <p class="muted" th:text="${branch.address}"></p>
+  <div class="card" th:each="g : ${groups}">
+    <h3 th:text="${g.title}"></h3>
+    <div class="seatgrid">
+      <form th:each="s : ${g.seats}" th:action="@{/admin/seats/{id}/toggle(id=${s.id})}" method="post" style="margin:0">
+        <input type="hidden" name="branchId" th:value="${branch.id}">
+        <button type="submit" class="btn sm" th:classappend="${s.active ? '' : 'gray'}" th:text="${s.label} + (${s.active} ? '' : ' (꺼짐)')"></button>
+      </form>
+    </div>
+  </div>
+  <p><a class="btn sm ghost" th:href="@{/admin}">대시보드로</a></p>
+</main>
+</body>
+</html>

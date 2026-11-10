@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('내 예약')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('rsv')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <h1>내 예약</h1>
+  <p class="sub">보유 포인트 <b th:text="${#numbers.formatInteger(balance, 1, 'COMMA')} + 'P'"></b> · <a th:href="@{/my/points}" style="color:var(--brand-dark);font-weight:700">충전하기</a></p>
+
+  <div class="live" th:each="v : ${current}">
+    <div style="opacity:.9;font-size:13px">이용 중 · <span th:text="${v.place()}"></span></div>
+    <div class="t" th:attr="data-end=${v.r.endAt}" data-live>--:--:--</div>
+    <div style="opacity:.9;font-size:13px;margin-bottom:10px" th:text="${#temporals.format(v.r.endAt, 'HH:mm')} + '까지'"></div>
+    <a class="btn sm" th:href="@{/reservations/{id}(id=${v.r.id})}">QR · 연장 · 퇴실</a>
+  </div>
+
+  <h2 th:if="${!upcoming.isEmpty()}">예정된 예약</h2>
+  <a class="rcard" th:each="v : ${upcoming}" th:href="@{/reservations/{id}(id=${v.r.id})}">
+    <div class="when"><b th:text="${#temporals.format(v.r.startAt, 'd')}">1</b><span th:text="${#temporals.format(v.r.startAt, 'M월')}">1월</span></div>
+    <div class="info">
+      <b th:text="${v.branch.name} + ' · ' + ${v.zone.name} + ' ' + ${v.seat.label}">장소</b>
+      <div class="muted" th:text="${#temporals.format(v.r.startAt, 'HH:mm')} + ' – ' + ${#temporals.format(v.r.endAt, 'HH:mm')} + ' · ' + ${#numbers.formatInteger(v.r.usedPoint, 1, 'COMMA')} + 'P'">시간</div>
+    </div>
+    <span class="pill BOOKED" th:if="${v.canCheckIn}">입실 가능</span>
+    <span class="pill BOOKED" th:unless="${v.canCheckIn}">예약</span>
+  </a>
+
+  <h2 th:if="${!past.isEmpty()}">지난 이용</h2>
+  <div th:each="v : ${past}" class="rcard" style="flex-wrap:wrap">
+    <div class="when"><b th:text="${#temporals.format(v.r.startAt, 'd')}">1</b><span th:text="${#temporals.format(v.r.startAt, 'M월')}">1월</span></div>
+    <div class="info">
+      <b th:text="${v.branch.name} + ' · ' + ${v.zone.name} + ' ' + ${v.seat.label}">장소</b>
+      <div class="muted" th:text="${#temporals.format(v.r.startAt, 'HH:mm')} + ' – ' + ${#temporals.format(v.r.endAt, 'HH:mm')}">시간</div>
+    </div>
+    <span class="pill" th:classappend="${v.r.status}"
+          th:text="${v.r.status.name() == 'DONE' ? '이용 완료' : (v.r.status.name() == 'CANCELED' ? '취소' : '노쇼')}">상태</span>
+    <details th:if="${v.canReview}" style="flex-basis:100%">
+      <summary class="muted" style="cursor:pointer">후기 쓰기</summary>
+      <form th:action="@{/reviews}" method="post">
+        <input type="hidden" name="reservationId" th:value="${v.r.id}">
+        <label>별점</label>
+        <select name="rating"><option value="5">★★★★★</option><option value="4">★★★★</option><option value="3">★★★</option><option value="2">★★</option><option value="1">★</option></select>
+        <label>후기</label>
+        <textarea name="content" rows="2" maxlength="500" required></textarea>
+        <p><button class="btn sm" type="submit">등록</button></p>
+      </form>
+    </details>
+  </div>
+
+  <div class="card" th:if="${current.isEmpty() and upcoming.isEmpty() and past.isEmpty()}">
+    <p style="margin:0">아직 예약이 없어요. <a th:href="@{/branches}" style="color:var(--brand-dark);font-weight:700">가까운 지점 찾기</a></p>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('rsv')}"></nav>
+<script>
+  document.querySelectorAll('[data-live]').forEach(function (el) {
+    var end = new Date(el.dataset.end).getTime();
+    (function tick() {
+      var s = Math.max(0, Math.floor((end - Date.now()) / 1000));
+      el.textContent = [Math.floor(s / 3600), Math.floor(s % 3600 / 60), s % 60].map(function (n) { return String(n).padStart(2, '0'); }).join(':');
+      if (s > 0) { setTimeout(tick, 1000); }
+    })();
+  });
+</script>
+</body>
+</html>

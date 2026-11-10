@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: headMap(${d.card.branch.name})}"></head>
+<body>
+<header th:replace="~{fragments :: nav('branches')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <p class="muted" style="margin:0 0 10px"><a th:href="@{/branches}">← 지점 찾기</a></p>
+
+  <div class="hero" th:style="'background:linear-gradient(135deg,' + (${d.card.branch.id % 5 == 0} ? '#17314f,#3b6fb6' : (${d.card.branch.id % 5 == 1} ? '#0b7a77,#36c5b8' : (${d.card.branch.id % 5 == 2} ? '#5b3a8a,#9a6fd0' : (${d.card.branch.id % 5 == 3} ? '#8a4b1e,#d9904a' : '#1f6a4a,#4fbf86')))) + ')'">
+    <form th:if="${me != null}" th:action="@{/branches/{id}/favorite(id=${d.card.branch.id})}" method="post">
+      <button class="heart" th:classappend="${d.card.favorite} ? 'on'" type="submit" th:title="${d.card.favorite} ? '내 지점에서 빼기' : '내 지점으로 등록'" th:text="${d.card.favorite} ? '♥' : '♡'">♡</button>
+    </form>
+    <span class="pill" th:classappend="${d.card.level}"
+          th:text="${d.card.level == 'OK' ? '지금 여유' : (d.card.level == 'BUSY' ? '지금 보통' : (d.card.level == 'FULL' ? '지금 혼잡' : '영업 종료'))}">여유</span>
+    <h1 th:text="${d.card.branch.name}">지점</h1>
+    <div class="hmeta" th:text="${d.card.branch.address}">주소</div>
+    <div class="hmeta">
+      <span th:text="${d.card.branch.is24h()} ? '24시간 운영' : ('운영 ' + ${d.card.branch.openHour} + ':00 ~ ' + ${d.card.branch.closeHour} + ':00')">운영</span>
+      · <span th:text="${d.card.branch.phone}">전화</span>
+    </div>
+    <p style="margin:10px 0 0;opacity:.95" th:text="${d.card.branch.description}">소개</p>
+  </div>
+
+  <div class="stat3">
+    <div><div class="k">지금 잔여석</div><div class="v"><span th:text="${d.card.openNow} ? ${d.card.freeNow} : '-'">0</span><small class="muted" th:text="' / ' + ${d.card.totalSeats}"></small></div></div>
+    <div><div class="k">최저 요금</div><div class="v"><span th:text="${#numbers.formatInteger(d.card.minPrice, 1, 'COMMA')}">0</span><small class="muted">P/시간</small></div></div>
+    <div><div class="k">이용 후기</div><div class="v"><span class="stars">★</span> <span th:text="${reviews.isEmpty()} ? '-' : ${#numbers.formatDecimal(rating, 1, 1)}">-</span><small class="muted" th:text="' (' + ${reviews.size()} + ')'"></small></div></div>
+  </div>
+
+  <div class="card">
+    <h3>좌석 종류 · 요금</h3>
+    <table>
+      <thead><tr><th>구역</th><th>요금</th><th>좌석 수</th><th>지금 잔여</th></tr></thead>
+      <tbody>
+        <tr th:each="z : ${d.zones}">
+          <td><b th:text="${z.zone.name}">구역</b></td>
+          <td th:text="${#numbers.formatInteger(z.zone.pricePointPerHr, 1, 'COMMA')} + 'P/시간'">요금</td>
+          <td th:text="${z.seatCount} + (${z.zone.zoneType == 'ROOM'} ? '실' : '석')">0</td>
+          <td><b th:text="${d.card.openNow} ? ${z.freeNow} : '-'">0</b></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="tiny" style="margin:8px 0 0">스터디룸은 방 단위 요금입니다. 1포인트 = 1원으로 계산해요.</p>
+  </div>
+
+  <div class="card">
+    <h3>시간대별 혼잡도 <span class="muted">(최근 2주 평균)</span></h3>
+    <p class="muted" th:if="${d.popularity.isEmpty()}" style="margin:0">아직 집계된 데이터가 없어요.</p>
+    <div th:unless="${d.popularity.isEmpty()}">
+      <div class="pop-bars">
+        <div class="b" th:each="p : ${d.popularity}" th:classappend="${p.hour == hour} ? 'now' : (${p.percent >= 75} ? 'hi')"
+             th:style="'height:' + (${p.percent} < 4 ? 4 : ${p.percent}) + '%'" th:title="${p.hour} + '시 · ' + ${p.percent} + '%'"></div>
+      </div>
+      <div class="pop-hours"><span th:each="p : ${d.popularity}" th:text="${p.hour % 3 == 0} ? ${p.hour} : ''"></span></div>
+      <p class="tiny" style="margin:8px 0 0">초록: 지금 시간 · 주황: 75% 이상 붐비는 시간. 한가한 시간에 예약하면 자리가 넉넉해요.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>편의시설</h3>
+    <div class="chips"><span class="chip" th:each="a : ${d.amenities}" th:text="${a}">시설</span></div>
+    <h3 style="margin-top:16px">위치</h3>
+    <div id="minimap"></div>
+    <p class="tiny" style="margin:6px 0 0"><a th:href="'https://www.openstreetmap.org/?mlat=' + ${d.card.branch.lat} + '&mlon=' + ${d.card.branch.lng} + '#map=17/' + ${d.card.branch.lat} + '/' + ${d.card.branch.lng}" target="_blank" rel="noopener">큰 지도에서 보기 ↗</a></p>
+  </div>
+
+  <div class="card">
+    <h3>이용 후기</h3>
+    <p class="muted" th:if="${reviews.isEmpty()}" style="margin:0">아직 이 지점의 후기가 없어요.</p>
+    <div class="review" th:each="v : ${reviews}" th:if="${vStat.index < 5}">
+      <span class="stars" th:text="${'★'.repeat(v.review.rating) + '☆'.repeat(5 - v.review.rating)}"></span>
+      <b th:text="${v.writer}"></b> <span class="tiny" th:text="${#temporals.format(v.review.createdAt, 'yyyy.MM.dd')}"></span>
+      <div th:text="${v.review.content}"></div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <a class="btn block" th:href="@{/branches/{id}/book(id=${d.card.branch.id})}">좌석 예약하기</a>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('branches')}"></nav>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script th:inline="javascript">
+  var lat = /*[[${d.card.branch.lat}]]*/ 37.5, lng = /*[[${d.card.branch.lng}]]*/ 127;
+  var m = L.map('minimap', { scrollWheelZoom: false }).setView([lat, lng], 15);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(m);
+  L.marker([lat, lng]).addTo(m);
+</script>
+</body>
+</html>

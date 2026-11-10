@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${branch.name} + ' 좌석 예약')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('branches')}"></header>
+<main class="wide">
+  <div th:replace="~{fragments :: flash}"></div>
+  <p class="muted" style="margin:0 0 6px"><a th:href="@{/branches/{id}(id=${branch.id})}">← <span th:text="${branch.name}"></span> 정보</a></p>
+  <h1 th:text="${branch.name} + ' 좌석 예약'">좌석 예약</h1>
+  <p class="sub">날짜와 시간을 고른 뒤 도면에서 자리를 눌러 선택하세요. 선택한 시간 동안 비어 있는 자리만 눌러져요.</p>
+
+  <!-- 1. 날짜 -->
+  <div class="datebar">
+    <a class="dchip" th:each="dt : ${dates}"
+       th:classappend="(${dt == date} ? 'on ' : '') + (${dt.dayOfWeek.value == 7} ? 'sun ' : '') + (${dt.dayOfWeek.value == 6} ? 'sat' : '')"
+       th:href="@{/branches/{id}/book(id=${branch.id}, date=${dt}, start=${start}, hours=${hours})}">
+      <small th:text="${dt.dayOfWeek.getDisplayName(T(java.time.format.TextStyle).SHORT, T(java.util.Locale).KOREAN)}">요일</small>
+      <span th:text="${dt.dayOfMonth}">1</span>
+    </a>
+  </div>
+
+  <!-- 2. 시간 -->
+  <form method="get" th:action="@{/branches/{id}/book(id=${branch.id})}" class="card row" style="margin-top:6px">
+    <input type="hidden" name="date" th:value="${date}">
+    <div>
+      <label for="start" style="margin-top:0">시작 시간</label>
+      <select id="start" name="start" onchange="this.form.submit()" style="min-width:110px">
+        <option th:each="h : ${startOptions}" th:value="${h}" th:text="${h} + ':00'" th:selected="${h == start}"></option>
+      </select>
+    </div>
+    <div>
+      <label style="margin-top:0">이용 시간</label>
+      <div class="chips">
+        <button type="submit" name="hours" th:each="n : ${durations}" th:value="${n}" class="chip" th:classappend="${n == hours} ? 'on'" th:text="${n} + '시간'" style="cursor:pointer"></button>
+      </div>
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div class="muted" th:text="${#temporals.format(date, 'M월 d일')} + ' ' + ${start} + ':00 – ' + ${end} + ':00'">시간</div>
+      <div><b th:text="'지금 선택 가능 ' + ${plan.free} + '석'" style="color:var(--brand-dark)">0석</b> <span class="muted" th:text="'/ ' + ${plan.total}"></span></div>
+    </div>
+  </form>
+
+  <!-- 3. 도면 -->
+  <div class="chips" style="margin:2px 0 10px">
+    <span class="chip" th:each="z : ${plan.zones}" th:text="${z.name} + ' · ' + ${#numbers.formatInteger(z.price, 1, 'COMMA')} + 'P/시간'"></span>
+  </div>
+  <div class="planwrap">
+    <div class="plan" th:style="'aspect-ratio:' + ${plan.w} + ' / ' + ${plan.h}">
+      <div class="zone" th:each="z : ${plan.zones}" th:style="${z.style}">
+        <span th:text="${z.name} + ' · ' + ${#numbers.formatInteger(z.price, 1, 'COMMA')} + 'P/시간'"></span>
+      </div>
+      <div class="obj" th:each="o : ${plan.objects}" th:classappend="${o.kind}" th:style="${o.style}" th:text="${o.name}"></div>
+      <button type="button" class="seat" th:each="s : ${plan.seats}"
+              th:classappend="${s.type} + ' ' + ${s.state} + ' g' + ${s.gender}" th:style="${s.style}"
+              th:disabled="${s.state != 'FREE'}" th:title="${s.tip}"
+              th:attr="data-id=${s.id},data-label=${s.label},data-zone=${s.zone},data-price=${s.price},data-cap=${s.capacity},data-gender=${s.gender},data-soon=${s.endingSoon}">
+        <i class="soonmark" th:if="${s.endingSoon}"></i>
+        <i class="bd f" th:if="${s.gender == 'F' and s.state != 'FIXED'}">여</i>
+        <i class="bd m" th:if="${s.gender == 'M' and s.state != 'FIXED'}">남</i>
+        <i class="bd x" th:if="${s.state == 'FIXED'}">고정</i>
+        <span class="no" th:text="${s.shortLabel}">1</span>
+        <small th:if="${s.type == 'ROOM'}" th:text="${s.capacity} + '인실'">4인실</small>
+      </button>
+    </div>
+    <div class="legend">
+      <span><i></i>선택 가능</span><span><i class="t"></i>선택 불가(예약됨)</span><span><i class="m"></i>내 예약</span><span><i class="p"></i>선택한 자리</span>
+      <span><i class="s"></i>퇴실예정석</span><span><i class="x"></i>고정석</span><span><i class="f"></i>여성 전용</span><span><i class="g"></i>남성 전용</span><span><i class="r"></i>스터디룸</span>
+    </div>
+  </div>  <p class="tiny">입구·키오스크·사물함·카운터·화장실·창가는 지점 도면의 위치예요. 책상 위쪽 굵은 선은 칸막이, 아래쪽은 의자 방향이에요.
+  <b>퇴실예정석</b>은 선택한 시간 바로 전까지 다른 분이 쓰다가 그 시간에 비는 자리, <b>고정석</b>은 월 이용권 회원 전용, <b>여성/남성 전용</b>은 회원 정보의 성별이 같아야 예약돼요.</p>
+
+  <!-- 4. 예약 바 -->
+  <form th:if="${me != null}" th:action="@{/reserve}" method="post" class="bookbar" id="reserveForm">
+    <input type="hidden" name="seatId" id="seatId">
+    <input type="hidden" name="branchId" th:value="${branch.id}">
+    <input type="hidden" name="date" th:value="${date}">
+    <input type="hidden" name="start" th:value="${start}">
+    <input type="hidden" name="hours" th:value="${hours}">
+    <div class="what">
+      <div id="pickedText" class="muted">도면에서 자리를 선택하세요</div>
+      <div><b id="priceText">-</b> <span class="muted" th:if="${balance != null}" th:text="'· 보유 ' + ${#numbers.formatInteger(balance, 1, 'COMMA')} + 'P'"></span></div>
+    </div>
+    <button type="submit" class="btn" id="submitBtn" disabled>예약하기</button>
+  </form>
+  <div th:if="${me == null}" class="bookbar" id="anonBar">
+    <div class="what">
+      <div id="pickedText" class="muted">도면에서 자리를 선택하세요</div>
+      <div><b id="priceText">-</b></div>
+    </div>
+    <a class="btn" th:href="@{/login}">로그인하고 예약하기</a>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('branches')}"></nav>
+<script th:inline="javascript">
+  (function () {
+    var hours = /*[[${hours}]]*/ 1, start = /*[[${start}]]*/ 9, end = /*[[${end}]]*/ 10;
+    var picked = document.getElementById('pickedText'), price = document.getElementById('priceText'), btn = document.getElementById('submitBtn');
+    document.querySelectorAll('.seat.FREE').forEach(function (s) {
+      s.addEventListener('click', function () {
+        document.querySelectorAll('.seat.PICK').forEach(function (p) { p.classList.remove('PICK'); });
+        s.classList.add('PICK');
+        var sid = document.getElementById('seatId'); if (sid) { sid.value = s.dataset.id; }
+        var total = parseInt(s.dataset.price, 10) * hours;
+        var note = (s.dataset.gender === 'F' ? ' · 여성 전용' : (s.dataset.gender === 'M' ? ' · 남성 전용' : '')) + (s.dataset.soon === 'true' ? ' · 퇴실예정석' : '');
+        picked.innerHTML = '<b style="color:var(--ink)">' + s.dataset.zone + ' ' + s.dataset.label + '</b>' + note + ' · ' + start + ':00 – ' + end + ':00 (' + hours + '시간)';
+        price.textContent = total.toLocaleString() + 'P';
+        if (btn) { btn.disabled = false; }
+      });
+    });
+  })();
+</script>
+</body>
+</html>

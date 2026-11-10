@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('관리자 대시보드')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('admin')}"></header>
+<main class="wide">
+  <div th:replace="~{fragments :: flash}"></div>
+  <h1>관리자 · 전국 현황과 혼잡도</h1>
+  <p class="sub">예약(좌석 슬롯) 기준 점유율이에요. 매시 5분에 직전 시간이 집계되고, 앱이 꺼져 있던 구간은 켜질 때 채워져요.</p>
+
+  <div class="grid c3">
+    <div class="card"><div class="muted">전체 지점</div><div class="big" th:text="${#numbers.formatInteger(totalBranches, 1, 'COMMA')}">0</div></div>
+    <div class="card"><div class="muted">전체 좌석</div><div class="big" th:text="${#numbers.formatInteger(totalSeats, 1, 'COMMA')}">0</div></div>
+  </div>
+
+  <div class="card">
+    <h3>시·도별 현황 <span class="muted">(지금 시간, 영업 중인 지점 기준)</span></h3>
+    <table>
+      <thead><tr><th>시·도</th><th>지점</th><th>좌석</th><th>지금 잔여</th><th style="width:30%">점유율</th></tr></thead>
+      <tbody>
+        <tr th:each="r : ${sidoRows}">
+          <td><b th:text="${r.sido}"></b></td>
+          <td th:text="${r.branches}"></td>
+          <td th:text="${#numbers.formatInteger(r.seats, 1, 'COMMA')}"></td>
+          <td th:text="${#numbers.formatInteger(r.free, 1, 'COMMA')}"></td>
+          <td><div class="bar" th:classappend="${r.busyPercent >= 85 ? 'FULL' : (r.busyPercent >= 60 ? 'BUSY' : 'OK')}"><i th:style="'width:' + ${r.busyPercent} + '%'"></i></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="sido" style="margin-top:0">시·도</label>
+        <select id="sido" style="min-width:120px">
+          <option th:each="r : ${sidoRows}" th:value="${r.sido}" th:text="${r.sido} + ' (' + ${r.branches} + ')'" th:selected="${r.sido == sido}"></option>
+        </select>
+      </div>
+      <div style="min-width:240px">
+        <label for="branch" style="margin-top:0">지점</label>
+        <select id="branch"><option th:value="${branchId}" th:text="${branchName}"></option></select>
+      </div>
+      <div>
+        <label for="zone" style="margin-top:0">구역</label>
+        <select id="zone"><option th:value="${zoneId}" th:text="${zoneName}"></option></select>
+      </div>
+      <div>
+        <label for="date" style="margin-top:0">시간별 보기 날짜</label>
+        <input id="date" type="date" th:value="${date}">
+      </div>
+    </div>
+    <form th:action="@{/admin/backfill}" method="post" style="margin-top:12px">
+      <button class="btn sm ghost" type="submit">누락 통계 지금 보충</button>
+      <span class="muted">시간별 최근 48시간 → 일별 최근 7일 순서로, 비어 있는 구간만 채워요.</span>
+    </form>
+  </div>
+
+  <div class="charts">
+    <div class="card"><h3>시간별 점유율 (%)</h3><canvas id="hourly"></canvas><p class="muted" id="hourlyEmpty" hidden>이 날짜의 시간별 통계가 없어요.</p></div>
+    <div class="card"><h3>최근 7일 평균·최대 점유율 (%)</h3><canvas id="daily"></canvas><p class="muted" id="dailyEmpty" hidden>일별 통계가 아직 없어요.</p></div>
+  </div>
+
+  <p class="row"><a class="btn sm ghost" th:href="@{/admin/seats}">좌석 관리</a>
+     <a class="btn sm ghost" th:href="@{/admin/reservations}">예약 관리</a>
+     <a class="btn sm ghost" th:href="@{/admin/inquiries}">문의 답변</a></p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+  (function () {
+    var state = { sido: /*[[${sido}]]*/ '', branchId: /*[[${branchId}]]*/ 1, zoneId: /*[[${zoneId}]]*/ 1 };
+    var sidoSel = document.getElementById('sido'), branchSel = document.getElementById('branch'),
+        zoneSel = document.getElementById('zone'), dateEl = document.getElementById('date');
+    var charts = {};
+
+    function draw(id, emptyId, labels, sets, type) {
+      if (charts[id]) { charts[id].destroy(); charts[id] = null; }
+      var empty = document.getElementById(emptyId);
+      empty.hidden = labels.length > 0;
+      if (!labels.length) { return; }
+      charts[id] = new Chart(document.getElementById(id), {
+        type: type, data: { labels: labels, datasets: sets },
+        options: { scales: { y: { min: 0, max: 100 } }, plugins: { legend: { display: sets.length > 1 } } }
+      });
+    }
+    function loadCharts() {
+      var z = zoneSel.value, d = dateEl.value;
+      fetch('/api/stats/hourly?zoneId=' + z + '&date=' + d).then(function (r) { return r.json(); }).then(function (rows) {
+        draw('hourly', 'hourlyEmpty', rows.map(function (x) { return x.hour + '시'; }),
+          [{ label: '점유율', data: rows.map(function (x) { return x.rate; }), backgroundColor: '#0f9d9a', borderRadius: 4 }], 'bar');
+      });
+      fetch('/api/stats/daily?zoneId=' + z + '&days=7').then(function (r) { return r.json(); }).then(function (rows) {
+        draw('daily', 'dailyEmpty', rows.map(function (x) { return x.date.substring(5); }),
+          [{ label: '평균', data: rows.map(function (x) { return x.avgRate; }), borderColor: '#0f9d9a', backgroundColor: '#0f9d9a' },
+           { label: '최대', data: rows.map(function (x) { return x.peakRate; }), borderColor: '#f59e0b', backgroundColor: '#f59e0b' }], 'line');
+      });
+    }
+    function loadZones(branchId, keepZone) {
+      fetch('/api/branches/' + branchId + '/zones').then(function (r) { return r.json(); }).then(function (zs) {
+        zoneSel.innerHTML = '';
+        zs.forEach(function (z) { var o = document.createElement('option'); o.value = z.id; o.textContent = z.name; zoneSel.appendChild(o); });
+        if (keepZone) { zoneSel.value = keepZone; }
+        loadCharts();
+      });
+    }
+    function loadBranches(sido, keepBranch) {
+      fetch('/api/branches?sido=' + encodeURIComponent(sido)).then(function (r) { return r.json(); }).then(function (bs) {
+        branchSel.innerHTML = '';
+        bs.forEach(function (b) { var o = document.createElement('option'); o.value = b.id; o.textContent = b.name; branchSel.appendChild(o); });
+        if (keepBranch) { branchSel.value = keepBranch; }
+        loadZones(branchSel.value, keepBranch && String(keepBranch) === String(branchSel.value) ? state.zoneId : null);
+      });
+    }
+    sidoSel.addEventListener('change', function () { loadBranches(sidoSel.value, null); });
+    branchSel.addEventListener('change', function () { loadZones(branchSel.value, null); });
+    zoneSel.addEventListener('change', loadCharts);
+    dateEl.addEventListener('change', loadCharts);
+    loadBranches(state.sido, state.branchId);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('키오스크')}"></head>
+<body class="kiosk">
+<header th:replace="~{fragments :: nav('kiosk')}"></header>
+<main>
+  <div class="kbox">
+    <div style="font-size:13px;color:#8fb0d6;letter-spacing:2px">STUDYSEAT KIOSK · 시뮬레이터</div>
+    <h1 style="color:#fff;font-size:30px;margin:10px 0 4px">입실 · 퇴실</h1>
+    <p style="color:#8fb0d6;margin:0 0 18px">예약 상세 화면의 6자리 코드를 입력하세요.<br>(실제 매장에서는 QR 리더가 이 코드를 읽어요)</p>
+    <div class="flash ok" th:if="${ok}" th:text="${ok}"></div>
+    <div class="flash error" th:if="${error}" th:text="${error}"></div>
+    <form method="post" th:action="@{/kiosk/checkin}">
+      <input name="code" inputmode="numeric" maxlength="6" pattern="\d{6}" placeholder="000000" autocomplete="off" required autofocus>
+      <div class="row" style="margin-top:16px;gap:10px">
+        <button class="btn" type="submit" th:formaction="@{/kiosk/checkin}" style="flex:1">입실</button>
+        <button class="btn gray" type="submit" th:formaction="@{/kiosk/checkout}" style="flex:1">퇴실</button>
+      </div>
+    </form>
+    <p class="tiny" style="margin-top:18px;color:#6f8cad">데모용 단말입니다. 시작 10분 전부터 시작 후 10분까지 입실할 수 있어요.</p>
+  </div>
+</main>
+</body>
+</html>

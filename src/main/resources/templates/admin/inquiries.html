@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('문의 답변')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('admin')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <h1>문의 답변</h1>
+  <p class="sub">최신 문의부터 보여줘요.</p>
+  <div class="card" th:if="${inquiries.isEmpty()}"><p class="muted" style="margin:0">등록된 문의가 없어요.</p></div>
+  <div class="card" th:each="q : ${inquiries}">
+    <b th:text="${q.title}"></b>
+    <span class="tiny" th:text="${loginIds.get(q.memberId)} + ' · ' + ${#temporals.format(q.createdAt, 'MM-dd HH:mm')}"></span>
+    <p th:text="${q.content}"></p>
+    <div th:if="${q.answer != null}" style="background:var(--brand-soft);border-radius:12px;padding:12px 14px"><b>답변</b> <span th:text="${q.answer}"></span></div>
+    <form th:if="${q.answer == null}" th:action="@{/admin/inquiries/{id}/answer(id=${q.id})}" method="post">
+      <textarea name="answer" rows="2" maxlength="1000" required placeholder="답변을 입력하세요"></textarea>
+      <p><button class="btn sm" type="submit">답변 등록</button></p>
+    </form>
+  </div>
+  <p><a class="btn sm ghost" th:href="@{/admin}">대시보드로</a></p>
+</main>
+</body>
+</html>

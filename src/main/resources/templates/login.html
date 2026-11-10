@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('로그인')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <div class="form">
+    <h1 style="text-align:center">로그인</h1>
+    <p class="sub" style="text-align:center">예약과 포인트는 로그인 후 이용할 수 있어요.</p>
+    <div class="card">
+      <div class="flash error" th:if="${param.error}">아이디 또는 비밀번호가 맞지 않습니다</div>
+      <form th:action="@{/login}" method="post">
+        <label for="username" style="margin-top:0">아이디</label>
+        <input id="username" name="username" autocomplete="username" required autofocus>
+        <label for="password">비밀번호</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <p><button class="btn block" type="submit">로그인</button></p>
+        <p style="text-align:center;margin:0" class="muted">처음이세요? <a th:href="@{/signup}" style="color:var(--brand-dark);font-weight:700">회원가입</a></p>
+      </form>
+    </div>
+    <p class="tiny" style="text-align:center">체험용 계정 · 일반 회원 <b>demo / demo1234</b> · 관리자 <b>admin / admin1234</b></p>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('')}"></nav>
+</body>
+</html>

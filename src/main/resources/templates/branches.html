@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: headMap('지점 찾기')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('branches')}"></header>
+<main class="wide">
+  <div th:replace="~{fragments :: flash}"></div>
+  <div class="home">
+    <section class="list-pane">
+      <h1>가까운 스터디카페</h1>
+      <p class="sub"><span th:text="'지금 ' + ${#temporals.format(now, 'HH:mm')} + ' 기준'">지금</span> · <span id="countText">불러오는 중…</span></p>
+      <div class="search"><input id="q" type="search" placeholder="지점 이름·지역 검색 (예: 대전 둔산)" autocomplete="off"></div>
+      <div class="regionbar" id="regions"></div>
+      <div id="sggWrap" style="display:none;margin-bottom:10px"><select id="sgg"></select></div>
+      <div class="sortbar">
+        <button type="button" class="chip on" data-sort="free">잔여석 많은 순</button>
+        <button type="button" class="chip" data-sort="name">이름순</button>
+        <button type="button" class="chip" data-sort="dist" id="nearBtn">내 위치 가까운 순</button>
+      </div>
+      <div id="cards"></div>
+      <button type="button" class="btn ghost block" id="moreBtn" style="display:none;margin-bottom:10px">더 보기</button>
+      <p class="muted" id="empty" hidden>검색 결과가 없어요.</p>
+      <p class="tiny">지점 이름·주소·전화는 가상의 예시 데이터입니다. 지점이 놓인 시·군·구·읍·면·동은 실제 행정구역(2026년 10월 기준)이에요.</p>
+    </section>
+    <section class="map-pane"><div id="map"></div></section>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('branches')}"></nav>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script th:inline="javascript">
+  (function () {
+    var base = /*[[@{/branches/}]]*/ '/branches/';
+    var PAGE = 30;
+    var LEVEL = { OK: '여유', BUSY: '보통', FULL: '혼잡', CLOSED: '영업 종료' };
+    var all = [], view = [], shown = 0, region = '', sgg = '', sortKey = 'free', userPos = null, markers = {};
+
+    var map = L.map('map', { zoomControl: true }).setView([36.3, 127.8], 7);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    var group = L.markerClusterGroup({ maxClusterRadius: 50, showCoverageOnHover: false, chunkedLoading: true });
+    map.addLayer(group);
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function dist(a, b) {
+      var R = 6371, rad = Math.PI / 180, dLat = (b[0] - a[0]) * rad, dLng = (b[1] - a[1]) * rad;
+      var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return 2 * R * Math.asin(Math.sqrt(x));
+    }
+    function marker(b) {
+      if (markers[b.id]) { return markers[b.id]; }
+      var icon = L.divIcon({ className: '', iconSize: [44, 44], iconAnchor: [22, 44],
+        html: '<div class="mk ' + b.level + '"><span>' + (b.level === 'CLOSED' ? '-' : b.freeSeats) + '</span></div>' });
+      var m = L.marker([b.lat, b.lng], { icon: icon, title: b.name });
+      m.bindPopup('<div class="pop"><b>' + esc(b.name) + '</b><br><span class="muted">' +
+        (b.level === 'CLOSED' ? '지금은 영업 종료' : '잔여 ' + b.freeSeats + ' / ' + b.totalSeats + '석') +
+        '</span><br><a class="btn sm" href="' + base + b.id + '">자세히 보기 · 예약</a></div>');
+      markers[b.id] = m;
+      return m;
+    }
+
+    function applyFilter(fit) {
+      var t = document.getElementById('q').value.trim().toLowerCase();
+      view = all.filter(function (b) {
+        if (region && b.sido !== region) { return false; }
+        if (sgg && b.sgg !== sgg) { return false; }
+        return !t || (b.name + ' ' + b.address).toLowerCase().indexOf(t) >= 0;
+      });
+      view.sort(function (a, b) {
+        if (a.favorite !== b.favorite) { return a.favorite ? -1 : 1; }
+        if (sortKey === 'name') { return a.name.localeCompare(b.name, 'ko'); }
+        if (sortKey === 'dist' && userPos) { return a._d - b._d; }
+        return b.freeSeats - a.freeSeats;
+      });
+      document.getElementById('countText').textContent = view.length + '곳' + (region ? ' · ' + region + (sgg ? ' ' + sgg : '') : ' · 전국');
+      document.getElementById('empty').hidden = view.length > 0;
+      group.clearLayers();
+      group.addLayers(view.map(marker));
+      if (fit && view.length) {
+        var pts = view.map(function (b) { return [b.lat, b.lng]; });
+        map.fitBounds(pts, { padding: [50, 50], maxZoom: region ? 13 : 8 });
+      }
+      shown = 0;
+      document.getElementById('cards').innerHTML = '';
+      more();
+    }
+
+    function more() {
+      var box = document.getElementById('cards');
+      var end = Math.min(view.length, shown + PAGE), html = '';
+      for (var i = shown; i < end; i++) {
+        var b = view[i];
+        var hours = b.open === 0 && b.close === 24 ? '24시간 운영' : b.open + ':00 ~ ' + b.close + ':00';
+        html += '<a class="bcard" href="' + base + b.id + '" data-id="' + b.id + '">' +
+          '<div class="top"><b>' + esc(b.name) + '</b><span class="pill ' + b.level + '">' + LEVEL[b.level] + '</span>' +
+          '<span class="dist">' + (b._d != null ? (b._d < 1 ? Math.round(b._d * 1000) + 'm' : b._d.toFixed(1) + 'km') : '') + '</span>' +
+          (b.favorite ? '<span class="fav">♥ 내 지점</span>' : '') + '</div>' +
+          '<div class="muted">' + esc(b.address) + '</div>' +
+          '<div class="meta">' + (b.openNow ? '<span>잔여 <b>' + b.freeSeats + '</b> / ' + b.totalSeats + '석</span>' : '<span>총 ' + b.totalSeats + '석</span>') +
+          '<span>' + hours + '</span><span><b>' + b.minPricePerHour.toLocaleString() + '</b>P/시간~</span></div>' +
+          '<div class="bar ' + b.level + '"><i style="width:' + b.busyPercent + '%"></i></div></a>';
+      }
+      box.insertAdjacentHTML('beforeend', html);
+      shown = end;
+      document.getElementById('moreBtn').style.display = shown < view.length ? '' : 'none';
+      box.querySelectorAll('.bcard').forEach(function (c) {
+        if (c._bound) { return; }
+        c._bound = true;
+        c.addEventListener('mouseenter', function () {
+          var m = markers[c.dataset.id];
+          if (m) { map.panTo(m.getLatLng()); }
+        });
+      });
+    }
+
+    function buildRegions() {
+      var counts = {}, order = [];
+      all.forEach(function (b) { if (!(b.sido in counts)) { counts[b.sido] = 0; order.push(b.sido); } counts[b.sido]++; });
+      order.sort(function (a, b) { return counts[b] - counts[a]; });
+      var box = document.getElementById('regions');
+      function chip(label, value, on) {
+        var el = document.createElement('button');
+        el.type = 'button'; el.className = 'chip' + (on ? ' on' : ''); el.textContent = label; el.dataset.region = value;
+        el.addEventListener('click', function () {
+          region = value; sgg = '';
+          box.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('on', x.dataset.region === value); });
+          buildSgg();
+          applyFilter(true);
+        });
+        box.appendChild(el);
+      }
+      chip('전국 ' + all.length, '', true);
+      order.forEach(function (r) { chip(r + ' ' + counts[r], r, false); });
+    }
+
+    function buildSgg() {
+      var wrap = document.getElementById('sggWrap'), sel = document.getElementById('sgg');
+      if (!region) { wrap.style.display = 'none'; return; }
+      var counts = {};
+      all.forEach(function (b) { if (b.sido === region) { counts[b.sgg] = (counts[b.sgg] || 0) + 1; } });
+      var names = Object.keys(counts).sort(function (a, b) { return a.localeCompare(b, 'ko'); });
+      sel.innerHTML = '<option value="">' + region + ' 전체 시·군·구 (' + names.length + ')</option>' +
+        names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + ' (' + counts[n] + ')</option>'; }).join('');
+      wrap.style.display = '';
+    }
+
+    document.getElementById('sgg').addEventListener('change', function () { sgg = this.value; applyFilter(true); });
+    document.getElementById('q').addEventListener('input', function () { applyFilter(false); });
+    document.getElementById('moreBtn').addEventListener('click', more);
+    document.querySelectorAll('.sortbar .chip').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.dataset.sort === 'dist') {
+          if (!navigator.geolocation) { alert('이 브라우저에서는 위치를 사용할 수 없어요'); return; }
+          navigator.geolocation.getCurrentPosition(function (p) {
+            userPos = [p.coords.latitude, p.coords.longitude];
+            L.circleMarker(userPos, { radius: 8, color: '#fff', weight: 3, fillColor: '#3b82f6', fillOpacity: 1 }).addTo(map).bindTooltip('내 위치');
+            all.forEach(function (b) { b._d = dist(userPos, [b.lat, b.lng]); });
+            setSort('dist');
+          }, function () { alert('위치 권한이 없어 거리순 정렬을 할 수 없어요'); });
+        } else { setSort(btn.dataset.sort); }
+      });
+    });
+    function setSort(k) {
+      sortKey = k;
+      document.querySelectorAll('.sortbar .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.sort === k); });
+      applyFilter(false);
+    }
+
+    fetch('/api/branches').then(function (r) { return r.json(); }).then(function (data) {
+      all = data;
+      buildRegions();
+      // 홈에서 넘어온 검색어·시도 적용 (?q=둔산&sido=대전)
+      var params = new URLSearchParams(location.search);
+      if (params.get('q')) { document.getElementById('q').value = params.get('q'); }
+      var want = params.get('sido');
+      if (want) {
+        var chip = Array.prototype.filter.call(document.querySelectorAll('#regions .chip'), function (c) { return c.dataset.region === want; })[0];
+        if (chip) { chip.click(); return; }
+      }
+      applyFilter(true);
+    });
+  })();
+</script>
+</body>
+</html>

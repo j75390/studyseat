@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('예약 상세')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('rsv')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <p class="muted" style="margin:0 0 10px"><a th:href="@{/my/reservations}">← 내 예약</a></p>
+
+  <div class="ticket">
+    <div class="head">
+      <span class="pill" th:classappend="${v.r.status}"
+            th:text="${v.r.status.name() == 'BOOKED' ? '예약 완료' : (v.r.status.name() == 'CHECKED_IN' ? '이용 중' : (v.r.status.name() == 'DONE' ? '이용 완료' : (v.r.status.name() == 'CANCELED' ? '취소됨' : '노쇼')))}">상태</span>
+      <h1 th:text="${v.branch.name}">지점</h1>
+      <div th:text="${v.zone.name} + ' ' + ${v.seat.label} + (${v.zone.zoneType == 'ROOM'} ? ' (' + ${v.seat.capacity} + '인실)' : '')">좌석</div>
+    </div>
+    <div class="body">
+      <dl class="kv">
+        <dt>이용 일시</dt><dd th:text="${#temporals.format(v.r.startAt, 'M월 d일 (E)')} + ' ' + ${#temporals.format(v.r.startAt, 'HH:mm')} + ' – ' + ${#temporals.format(v.r.endAt, 'HH:mm')} + ' (' + ${v.r.hours()} + '시간)'">일시</dd>
+        <dt>결제 포인트</dt><dd th:text="${#numbers.formatInteger(v.r.usedPoint, 1, 'COMMA')} + 'P'">0P</dd>
+        <dt>예약 번호</dt><dd th:text="'#' + ${v.r.id}">#1</dd>
+        <dt>지점 주소</dt><dd th:text="${v.branch.address}">주소</dd>
+      </dl>
+    </div>
+    <div class="cut"></div>
+    <div class="body" th:if="${v.r.status.name() == 'BOOKED' or v.r.status.name() == 'CHECKED_IN'}">
+      <div class="qrbox"><div id="qr"></div></div>
+      <div class="code" th:text="${v.r.code}">000000</div>
+      <div class="muted" style="text-align:center">입구 키오스크에 QR을 대거나 코드를 입력하세요</div>
+      <ol class="steps">
+        <li>시작 10분 전부터 시작 후 10분 안에 <b>입실</b>해야 해요. 늦으면 노쇼 처리돼요.</li>
+        <li>이용 중에는 앱에서 <b>1~2시간 연장</b>할 수 있어요 (바로 뒤 시간이 비어 있을 때, 예약당 1회).</li>
+        <li>퇴실하면 이용 시간 1시간당 100P가 적립돼요.</li>
+      </ol>
+      <div th:if="${v.inUse}" class="card flat" style="background:var(--brand-soft);border-color:transparent">
+        남은 시간 <b id="remain" style="font-size:22px;font-variant-numeric:tabular-nums">--:--:--</b>
+      </div>
+    </div>
+    <div class="body" th:unless="${v.r.status.name() == 'BOOKED' or v.r.status.name() == 'CHECKED_IN'}">
+      <p class="muted" style="margin:0">이 예약은 끝났어요. 다시 이용하려면 새로 예약해 주세요.</p>
+      <p><a class="btn ghost" th:href="@{/branches/{id}/book(id=${v.branch.id})}">이 지점 다시 예약</a></p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px" th:if="${v.canCheckIn or v.canCheckOut or v.canExtend or v.canCancel}">
+    <div class="row">
+      <form th:if="${v.canCheckIn}" th:action="@{/reservations/{id}/checkin(id=${v.r.id})}" method="post"><button class="btn" type="submit">앱에서 입실하기</button></form>
+      <form th:if="${v.canCheckOut}" th:action="@{/reservations/{id}/checkout(id=${v.r.id})}" method="post"><button class="btn" type="submit">퇴실하기</button></form>
+      <form th:if="${v.canExtend}" th:action="@{/reservations/{id}/extend(id=${v.r.id})}" method="post" class="row" style="gap:6px">
+        <button class="btn ghost" type="submit" name="hours" value="1">+1시간 연장</button>
+        <button class="btn ghost" type="submit" name="hours" value="2">+2시간 연장</button>
+      </form>
+      <form th:if="${v.canCancel}" th:action="@{/reservations/{id}/cancel(id=${v.r.id})}" method="post"><button class="btn danger" type="submit">예약 취소</button></form>
+    </div>
+    <p class="tiny" style="margin:10px 0 0">취소는 시작 60분 전까지 가능하며 사용한 포인트는 전액 환불돼요. 연장 요금은 이 구역 시간당 요금(<span th:text="${#numbers.formatInteger(v.zone.pricePointPerHr, 1, 'COMMA')}"></span>P)으로 계산돼요.</p>
+  </div>
+  <p class="muted"><a th:href="@{/kiosk}">키오스크 시뮬레이터 열기 ↗</a> · <a th:href="@{/branches/{id}(id=${v.branch.id})}">지점 정보</a></p>
+</main>
+<nav th:replace="~{fragments :: tabbar('rsv')}"></nav>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script th:inline="javascript">
+  (function () {
+    var code = /*[[${v.r.code}]]*/ '000000';
+    var el = document.getElementById('qr');
+    if (el && typeof qrcode === 'function') {
+      var qr = qrcode(0, 'M'); qr.addData('STUDYSEAT:' + code); qr.make();
+      el.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+    }
+    var endAt = /*[[${v.r.endAt}]]*/ null;
+    var out = document.getElementById('remain');
+    if (out && endAt) {
+      var end = new Date(endAt).getTime();
+      (function tick() {
+        var s = Math.max(0, Math.floor((end - Date.now()) / 1000));
+        var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+        out.textContent = [h, m, x].map(function (n) { return String(n).padStart(2, '0'); }).join(':');
+        if (s > 0) { setTimeout(tick, 1000); }
+      })();
+    }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('회원가입')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('')}"></header>
+<main class="narrow">
+  <div th:replace="~{fragments :: flash}"></div>
+  <div class="form">
+    <h1 style="text-align:center">회원가입</h1>
+    <p class="sub" style="text-align:center">가입하면 환영 포인트 20,000P를 드려요.</p>
+    <div class="card">
+      <form th:action="@{/signup}" method="post">
+        <label for="loginId" style="margin-top:0">아이디 (영문·숫자·밑줄 4~20자)</label>
+        <input id="loginId" name="loginId" required pattern="[a-zA-Z0-9_]{4,20}">
+        <label for="password">비밀번호 (8자 이상)</label>
+        <input id="password" name="password" type="password" required minlength="8" maxlength="50">
+        <label for="name">이름</label>
+        <input id="name" name="name" required maxlength="20">
+        <label for="gender">성별 (선택)</label>
+        <select id="gender" name="gender">
+          <option value="">선택 안 함</option>
+          <option value="F">여성</option>
+          <option value="M">남성</option>
+        </select>
+        <p class="tiny" style="margin:4px 0 0">여성·남성 전용 좌석은 같은 성별로 등록한 회원만 예약할 수 있어요.</p>
+        <label for="phone">연락처 (선택)</label>
+        <input id="phone" name="phone" maxlength="20">
+        <p><button class="btn block" type="submit">가입하기</button></p>
+      </form>
+    </div>
+  </div>
+</main>
+<nav th:replace="~{fragments :: tabbar('')}"></nav>
+</body>
+</html>

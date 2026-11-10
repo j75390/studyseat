@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f9d9a">
+  <title th:text="${title} + ' · StudySeat'">StudySeat</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script th:src="@{/js/ui.js}" defer></script>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/logo.svg}">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<head th:fragment="headMap(title)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f9d9a">
+  <title th:text="${title} + ' · StudySeat'">StudySeat</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script th:src="@{/js/ui.js}" defer></script>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/logo.svg}">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topbar" th:fragment="nav(active)">
+  <div class="in">
+    <a class="logo" th:href="@{/}"><img class="mark" th:src="@{/img/logo.svg}" alt="">StudySeat</a>
+    <nav class="menu">
+      <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">홈</a>
+      <a th:href="@{/branches}" th:classappend="${active == 'branches'} ? 'on'">지점 찾기</a>
+      <a th:href="@{/my/reservations}" th:classappend="${active == 'rsv'} ? 'on'" th:if="${me != null}">내 예약</a>
+      <a th:href="@{/my/points}" th:classappend="${active == 'pnt'} ? 'on'" th:if="${me != null}">포인트</a>
+      <a th:href="@{/reviews}" th:classappend="${active == 'rev'} ? 'on'">이용 후기</a>
+      <a th:href="@{/my/inquiries}" th:classappend="${active == 'inq'} ? 'on'" th:if="${me != null}">1:1 문의</a>
+      <a th:href="@{/kiosk}" th:classappend="${active == 'kiosk'} ? 'on'">키오스크</a>
+      <a th:href="@{/admin}" th:classappend="${active == 'admin'} ? 'on'" th:if="${isAdmin}">관리자</a>
+    </nav>
+    <div class="right">
+      <span class="name" th:if="${me != null}" th:text="${me} + '님'"></span>
+      <form th:if="${me != null}" th:action="@{/logout}" method="post" style="margin:0">
+        <button class="btn sm gray" type="submit">로그아웃</button>
+      </form>
+      <a th:if="${me == null}" class="btn sm ghost" th:href="@{/login}">로그인</a>
+      <a th:if="${me == null}" class="btn sm" th:href="@{/signup}">가입</a>
+    </div>
+  </div>
+</header>
+<nav class="tabbar" th:fragment="tabbar(active)">
+  <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'"><i data-lucide="house"></i>홈</a>
+  <a th:href="@{/branches}" th:classappend="${active == 'branches'} ? 'on'"><i data-lucide="map-pin"></i>지점</a>
+  <a th:href="@{/my/reservations}" th:classappend="${active == 'rsv'} ? 'on'"><i data-lucide="ticket"></i>내 예약</a>
+  <a th:href="@{/my/points}" th:classappend="${active == 'pnt'} ? 'on'"><i data-lucide="wallet"></i>포인트</a>
+  <a th:href="${me != null} ? @{/my/inquiries} : @{/login}" th:classappend="${active == 'inq'} ? 'on'"><i data-lucide="circle-user-round"></i>내 정보</a>
+</nav>
+<div th:fragment="flash">
+  <div class="flash ok" th:if="${ok}" th:text="${ok}"></div>
+  <div class="flash error" th:if="${error}" th:text="${error}"></div>
+</div>
+</body>
+</html>

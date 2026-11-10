@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('예약 관리')}"></head>
+<body>
+<header th:replace="~{fragments :: nav('admin')}"></header>
+<main class="wide">
+  <div th:replace="~{fragments :: flash}"></div>
+  <h1>예약 관리</h1>
+  <p class="sub">최근 100건이에요. 강제 취소하면 슬롯이 풀리고 사용 포인트가 환불돼요.</p>
+  <div class="card" style="overflow-x:auto">
+    <table>
+      <thead><tr><th>번호</th><th>회원</th><th>지점 · 자리</th><th>이용 시간</th><th>상태</th><th></th></tr></thead>
+      <tbody>
+        <tr th:each="x : ${rows}">
+          <td th:text="'#' + ${x.r.id}"></td>
+          <td th:text="${loginIds.getOrDefault(x.r.memberId, '?')}"></td>
+          <td th:text="${x.place()}"></td>
+          <td th:text="${#temporals.format(x.r.startAt, 'MM-dd HH:mm')} + ' ~ ' + ${#temporals.format(x.r.endAt, 'HH:mm')}"></td>
+          <td><span class="pill" th:classappend="${x.r.status}" th:text="${x.r.status}"></span></td>
+          <td>
+            <form th:if="${x.r.status.name() == 'BOOKED' or x.r.status.name() == 'CHECKED_IN'}"
+                  th:action="@{/admin/reservations/{id}/cancel(id=${x.r.id})}" method="post" style="margin:0">
+              <button class="btn sm danger" type="submit">강제 취소</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p><a class="btn sm ghost" th:href="@{/admin}">대시보드로</a></p>
+</main>
+</body>
+</html>
