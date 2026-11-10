@@ -23,9 +23,7 @@
 12. [테스트 결과](#12-테스트-결과)
 13. [트러블슈팅](#13-트러블슈팅)
 14. [향후 개선 계획](#14-향후-개선-계획)
-15. [회고](#15-회고)
-16. [정리 자료](#16-정리-자료)
-17. [실행 방법과 폴더 구조](#17-실행-방법과-폴더-구조)
+15. [정리 자료](#15-정리-자료)
 
 ---
 
@@ -692,47 +690,8 @@ public Reservation reserve(Long memberId, Long seatId, LocalDateTime startAt, in
 ### 4. 기록
 - 시연 영상을 찍어 이 README에 넣습니다.
 
-## 15. 회고
-
-이번에는 먼저 만든 뒤 눌러 보는 순서가 틀렸다는 걸 배웠습니다. 첫 버전은 간단한 표 하나로 시작했다가 "대충 만들었다"는 말을 들었고, 실제 앱을 먼저 조사하고 나서야 방향이 잡혔습니다. 또 키오스크의 CSRF 누락이나 비로그인 상태의 도면 오류처럼 자동 시험으로는 보이지 않던 문제를 앱을 직접 눌러 보다가 찾았습니다. 컨트롤러 시험이 없는 게 아쉬운 이유입니다.
-
-동시성은 설명보다 시험이 설득력이 있었습니다. 락을 빼면 시험이 실패하는 걸 직접 보고 나서야 이 시험이 문제를 잡고 있다는 확신이 생겼습니다. 반대로 MySQL에서 돌려 보지 못한 것은 가장 크게 남은 숙제입니다. H2에서 통과한 것과 MySQL에서 같은 결과가 나오는 것은 다른 이야기라서, 그 부분은 아직 확인했다고 말할 수 없습니다.
-
-## 16. 정리 자료
+## 15. 정리 자료
 
 [PDF](deliverables/StudySeat_발표자료_디자인판.pdf) · [PPT](deliverables/StudySeat_발표자료_디자인판.pptx)
 
 <img src="docs/images/slide-cover.png" width="24%"> <img src="docs/images/slide-concurrency.png" width="24%"> <img src="docs/images/slide-architecture.png" width="24%"> <img src="docs/images/slide-test.png" width="24%">
-
-## 17. 실행 방법과 폴더 구조
-
-JDK 17이 필요합니다. 지도 타일과 Chart.js, Leaflet, QR 라이브러리를 CDN에서 받아 오기 때문에 인터넷도 연결되어 있어야 합니다.
-
-```bash
-./gradlew bootRun        # Windows는 gradlew.bat bootRun, 주소는 http://localhost:8080
-./gradlew test
-```
-
-기본 DB는 파일이 없는 H2(MySQL 모드)이고 실행할 때마다 새 데이터로 시작합니다. 시작하면서 전국 지점 약 680곳(좌석 약 1만 5천 석)과 오늘 앞뒤 시간대의 예약 약 1.9만 건, 지난 3일 통계를 만들기 때문에 화면이 다 채워지기까지 15~25초쯤 걸립니다. 필요 없으면 `studyseat.demo=false`로 끕니다.
-
-MySQL을 쓰려면 `DB_URL`(예: `jdbc:mysql://localhost:3306/studyseat`), `DB_USER`, `DB_PASSWORD` 환경변수를 지정하면 됩니다. 스키마는 Flyway가 만듭니다.
-
-로컬에서 써 볼 계정이 두 개 있습니다. 일반 회원은 `demo / demo1234`, 관리자는 `admin / admin1234`입니다. 데모용이라 실제 서비스에 올린다면 반드시 없애거나 바꿔야 합니다.
-
-```
-src/main/java/com/studyseat/
-  config/        보안, Clock, 스케줄러, 시작 작업
-  domain/        엔티티
-  repository/    JPA 저장소 (회원·예약 행 잠금 조회 포함)
-  service/       예약, 포인트, 도면 엔진, 통계, 전국 지점 시더
-  web/           컨트롤러, 도면 변환, JSON API
-src/main/resources/
-  db/migration/  Flyway V1~V6
-  templates/     Thymeleaf 화면
-  static/        CSS, JS, 로고
-  data/          행정구역 데이터(admin_areas.csv)
-src/test/        자동 시험 40개
-tools/           지점·도면 시드 생성기, 산출물·스크린샷 도구
-docs/            기획, 요구사항, 설계, 테스트 결과, 작업일지
-deliverables/    산출물(PDF·엑셀), 발표 PPT, 스크린샷
-```
