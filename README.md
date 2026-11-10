@@ -8,8 +8,6 @@
 
 <img src="deliverables/screenshots/branches-map.png" width="49%"> <img src="deliverables/screenshots/booking-daejeon.png" width="49%">
 
-지점 이름, 주소, 전화번호, 예약, 회원, 후기는 전부 가짜 데이터입니다. 지점이 놓인 시·도·시·군·구·읍·면·동만 실제 행정구역입니다.
-
 ## 목차
 1. [만든 이유](#1-만든-이유)
 2. [프로젝트 목표](#2-프로젝트-목표)
